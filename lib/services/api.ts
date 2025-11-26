@@ -1,8 +1,9 @@
 import axios, { AxiosError } from 'axios';
-import { Task, TaskFormData, ApiResponse } from '../types/task';
+import { ApiResponse, Task, TaskFormData } from '../types/task';
 
 //URL por la IP de tu computadora  (ipconfig)
-const API_URL = 'http://localhost:3000'; // http://IP:3000
+const API_URL = 'https://3000-firebase-sumativatask-1764177843484.cluster-r7kbxfo3fnev2vskbkhhphetq6.cloudworkstations.dev';
+
 
 //Crear instancia de axios con configuración base
 const apiClient = axios.create({
@@ -71,9 +72,19 @@ export const createTask = async (taskData: TaskFormData): Promise<ApiResponse<Ta
     };
 
     const response = await apiClient.post<Task>('/tasks', newTask);
+    console.log('Tarea creada correctamente:', response.data);
     return { data: response.data };
-  } catch (error) {
-    console.error('Error al crear tarea:', error);
+  } catch (error: any) {
+    if (axios.isAxiosError(error)) {
+      console.log('AXIOS ERROR createTask:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+      });
+    } else {
+      console.log('ERROR createTask desconocido:', error);
+    }
+
     return { error: 'No se pudo crear la tarea.' };
   }
 };

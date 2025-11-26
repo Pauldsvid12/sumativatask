@@ -1,18 +1,33 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  Text,
+  Alert,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+} from 'react-native';
 import { TaskForm } from '../../components/TaskForm';
 import { useTasks } from '../../lib/contexts/TaskContext';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useTheme } from '../../lib/contexts/ThemeContext';
+import { Trash, X } from 'lucide-react-native';
 
 export default function TaskDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const taskId = Number(id);
   const { getTask, editTask, removeTask } = useTasks();
   const router = useRouter();
+  const { theme } = useTheme();
 
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [taskExists, setTaskExists] = useState(true);
+
+  const backgroundColor = theme === 'light' ? '#f9fafb' : '#121212';
+  const textColor = theme === 'light' ? '#111' : '#eee';
 
   const task = getTask(taskId);
 
@@ -57,44 +72,85 @@ export default function TaskDetail() {
     );
   };
 
+  const handleCancel = () => {
+    router.back();
+  };
+
   if (!taskExists) {
     return (
-      <View style={styles.centered}>
-        <Text style={styles.errorText}>Tarea no encontrada o eliminada</Text>
+      <View style={[styles.centered, { backgroundColor }]}>
+        <Text style={[styles.errorText]}>Tarea no encontrada o eliminada</Text>
+        <TouchableOpacity onPress={() => router.push('/')} style={styles.backButton}>
+          <Text style={{ color: '#3b82f6' }}>Volver al inicio</Text>
+        </TouchableOpacity>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <TaskForm
-        initialTitle={task?.title}
-        initialDescription={task?.description}
-        onSubmit={handleSubmit}
-        isLoading={loading}
-      />
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      style={[styles.container, { backgroundColor }]}
+    >
+      <View style={styles.header}>
+        <Text style={[styles.title, { color: textColor }]}>Editar Tarea</Text>
+        <TouchableOpacity onPress={handleCancel} style={styles.cancelButton}>
+          <X color={textColor} width={28} height={28} />
+        </TouchableOpacity>
+      </View>
 
-      <Text onPress={handleDelete} style={styles.deleteText}>
-        🗑️ Eliminar tarea
-      </Text>
+      <ScrollView contentContainerStyle={styles.formContainer}>
+        <TaskForm
+          initialTitle={task?.title}
+          initialDescription={task?.description}
+          onSubmit={handleSubmit}
+          isLoading={loading}
+        />
 
-      {formError && <Text style={styles.errorText}>{formError}</Text>}
-    </View>
+        <TouchableOpacity onPress={handleDelete} style={styles.deleteButton}>
+          <Trash color="#ef4444" width={24} height={24} />
+          <Text style={styles.deleteText}>Eliminar tarea</Text>
+        </TouchableOpacity>
+
+        {formError && <Text style={[styles.errorText]}>{formError}</Text>}
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+  },
+  header: {
+    height: 56,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
+  },
+  cancelButton: {
+    padding: 6,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: '700',
+  },
+  formContainer: {
     padding: 16,
   },
-  deleteText: {
+  deleteButton: {
     marginTop: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  deleteText: {
     color: '#ef4444',
     fontWeight: '700',
     fontSize: 16,
-    textAlign: 'center',
+    marginLeft: 8,
   },
   errorText: {
     color: '#ef4444',
@@ -106,5 +162,9 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 16,
+  },
+  backButton: {
+    marginTop: 16,
   },
 });
