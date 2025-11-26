@@ -1,24 +1,48 @@
+import axios, { AxiosError } from 'axios';
 import { Task, TaskFormData, ApiResponse } from '../types/task';
 
-//IP de tu computadora (ipconfig)
-const API_URL = 'http://localhost:3000'; // O http://TU_IP:3000
+//URL por la IP de tu computadora  (ipconfig)
+const API_URL = 'http://localhost:3000'; // http://IP:3000
+
+//Crear instancia de axios con configuración base
+const apiClient = axios.create({
+  baseURL: API_URL,
+  timeout: 10000, // Timeout de 10 segundos
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Interceptor para manejar errores globalmente
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError) => {
+    if (error.response) {
+      // El servidor respondió con un código de error
+      console.error(`Error ${error.response.status}:`, error.response.data);
+    } else if (error.request) {
+      // La petición se hizo pero no hubo respuesta
+      console.error('No se recibió respuesta del servidor:', error.request);
+    } else {
+      // Algo pasó al configurar la petición
+      console.error('Error al configurar la petición:', error.message);
+    }
+    return Promise.reject(error);
+  }
+);
 
 /**
  * Obtiene todas las tareas desde el servidor
  */
 export const getTasks = async (): Promise<ApiResponse<Task[]>> => {
   try {
-    const response = await fetch(`${API_URL}/tasks`);
-    
-    if (!response.ok) {
-      throw new Error(`Error HTTP: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    return { data };
+    const response = await apiClient.get<Task[]>('/tasks');
+    return { data: response.data };
   } catch (error) {
     console.error('Error al obtener tareas:', error);
-    return { error: 'No se pudieron cargar las tareas. Verifica que el servidor esté ejecutándose.' };
+    return { 
+      error: 'No se pudieron cargar las tareas. Verifica que el servidor esté ejecutándose.' 
+    };
   }
 };
 
@@ -27,14 +51,8 @@ export const getTasks = async (): Promise<ApiResponse<Task[]>> => {
  */
 export const getTaskById = async (id: number): Promise<ApiResponse<Task>> => {
   try {
-    const response = await fetch(`${API_URL}/tasks/${id}`);
-    
-    if (!response.ok) {
-      throw new Error(`Error HTTP: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    return { data };
+    const response = await apiClient.get<Task>(`/tasks/${id}`);
+    return { data: response.data };
   } catch (error) {
     console.error(`Error al obtener tarea ${id}:`, error);
     return { error: 'No se pudo cargar la tarea.' };
@@ -52,20 +70,8 @@ export const createTask = async (taskData: TaskFormData): Promise<ApiResponse<Ta
       createdAt: new Date().toISOString()
     };
 
-    const response = await fetch(`${API_URL}/tasks`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(newTask),
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Error HTTP: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    return { data };
+    const response = await apiClient.post<Task>('/tasks', newTask);
+    return { data: response.data };
   } catch (error) {
     console.error('Error al crear tarea:', error);
     return { error: 'No se pudo crear la tarea.' };
@@ -73,24 +79,15 @@ export const createTask = async (taskData: TaskFormData): Promise<ApiResponse<Ta
 };
 
 /**
- * Actualiza una tarea existente
+ * Actualiza una tarea existente (PATCH para actualización parcial)
  */
-export const updateTask = async (id: number, taskData: Partial<Task>): Promise<ApiResponse<Task>> => {
+export const updateTask = async (
+  id: number, 
+  taskData: Partial<Task>
+): Promise<ApiResponse<Task>> => {
   try {
-    const response = await fetch(`${API_URL}/tasks/${id}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(taskData),
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Error HTTP: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    return { data };
+    const response = await apiClient.patch<Task>(`/tasks/${id}`, taskData);
+    return { data: response.data };
   } catch (error) {
     console.error(`Error al actualizar tarea ${id}:`, error);
     return { error: 'No se pudo actualizar la tarea.' };
@@ -102,17 +99,13 @@ export const updateTask = async (id: number, taskData: Partial<Task>): Promise<A
  */
 export const deleteTask = async (id: number): Promise<ApiResponse<void>> => {
   try {
-    const response = await fetch(`${API_URL}/tasks/${id}`, {
-      method: 'DELETE',
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Error HTTP: ${response.status}`);
-    }
-    
+    await apiClient.delete(`/tasks/${id}`);
     return { data: undefined };
   } catch (error) {
     console.error(`Error al eliminar tarea ${id}:`, error);
     return { error: 'No se pudo eliminar la tarea.' };
   }
 };
+
+// Exportar la instancia de axios por si se necesita en otros lugares
+export { apiClient };
