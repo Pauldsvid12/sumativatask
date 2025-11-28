@@ -2,11 +2,13 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { Task } from '../lib/types/task';
 import { useRouter } from 'expo-router';
+import { useTheme } from '../lib/contexts/ThemeContext';
+import { Edit, Trash, CheckCircle, Circle } from 'lucide-react-native';
 
 interface TaskCardProps {
   task: Task;
-  onToggleComplete: (id: number) => void;
-  onDelete: (id: number) => void;
+  onToggleComplete: (id: string) => void; // Cambiado a string
+  onDelete: (id: string) => void;         // Cambiado a string
 }
 
 export const TaskCard: React.FC<TaskCardProps> = ({
@@ -15,6 +17,11 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   onDelete,
 }) => {
   const router = useRouter();
+  const { theme } = useTheme();
+
+  const backgroundColor = theme === 'light' ? '#fff' : '#1e1e1e';
+  const textColor = theme === 'light' ? '#1f2937' : '#ddd';
+  const subTextColor = theme === 'light' ? '#6b7280' : '#aaa';
 
   const handleDelete = () => {
     Alert.alert(
@@ -32,12 +39,13 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   };
 
   const handleEdit = () => {
+    // Navegación con params.id como string
     router.push({
       pathname: '/tasks/[id]',
-      params: { id: task.id.toString() },
+      params: { id: task.id },
     });
   };
-  
+
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
     return date.toLocaleDateString('es-ES', {
@@ -48,12 +56,13 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   };
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { backgroundColor }]}>
       {/* Encabezado con título y estado */}
       <View style={styles.header}>
         <Text
           style={[
             styles.title,
+            { color: textColor },
             task.completed && styles.titleCompleted,
           ]}
           numberOfLines={1}
@@ -76,6 +85,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       <Text
         style={[
           styles.description,
+          { color: subTextColor },
           task.completed && styles.descriptionCompleted,
         ]}
         numberOfLines={2}
@@ -84,7 +94,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       </Text>
 
       {/* Fecha */}
-      <Text style={styles.date}>Creada: {formatDate(task.createdAt)}</Text>
+      <Text style={[styles.date, { color: subTextColor }]}>
+        Creada: {formatDate(task.createdAt)}
+      </Text>
 
       {/* Botones de acción */}
       <View style={styles.actions}>
@@ -92,8 +104,13 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           style={[styles.actionButton, styles.toggleButton]}
           onPress={() => onToggleComplete(task.id)}
         >
+          {task.completed ? (
+            <CheckCircle size={18} color="#065f46" />
+          ) : (
+            <Circle size={18} color="#1f2937" />
+          )}
           <Text style={styles.actionButtonText}>
-            {task.completed ? '↩️ Pendiente' : '✓ Completar'}
+            {task.completed ? ' Pendiente' : ' Completar'}
           </Text>
         </TouchableOpacity>
 
@@ -101,14 +118,15 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           style={[styles.actionButton, styles.editButton]}
           onPress={handleEdit}
         >
-          <Text style={styles.actionButtonText}>✏️ Editar</Text>
+          <Edit size={18} color="#1f2937" />
+          <Text style={styles.actionButtonText}> Editar</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.actionButton, styles.deleteButton]}
           onPress={handleDelete}
         >
-          <Text style={styles.actionButtonText}>🗑️</Text>
+          <Trash size={18} color="#b91c1c" />
         </TouchableOpacity>
       </View>
     </View>
@@ -117,7 +135,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -136,13 +153,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1f2937',
     flex: 1,
     marginRight: 8,
   },
   titleCompleted: {
     textDecorationLine: 'line-through',
-    color: '#6b7280',
+    opacity: 0.6,
   },
   badge: {
     paddingHorizontal: 8,
@@ -162,16 +178,14 @@ const styles = StyleSheet.create({
   },
   description: {
     fontSize: 14,
-    color: '#4b5563',
     marginBottom: 8,
     lineHeight: 20,
   },
   descriptionCompleted: {
-    color: '#9ca3af',
+    opacity: 0.6,
   },
   date: {
     fontSize: 12,
-    color: '#9ca3af',
     marginBottom: 12,
   },
   actions: {
@@ -180,6 +194,8 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 6,
@@ -199,5 +215,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#1f2937',
+    marginLeft: 4,
   },
 });
