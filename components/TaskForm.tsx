@@ -1,21 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  TextInput,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-} from 'react-native';
+import React, { useState } from 'react';
+import { View, TextInput, Text, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { Mic, Calendar, Clock, XCircle } from 'lucide-react-native';
+import { useTheme } from '../lib/contexts/ThemeContext';
 import { ValidationError } from '../lib/types/task';
 import { validateTaskForm } from '../lib/utils/validation';
 
 interface TaskFormProps {
   initialTitle?: string;
   initialDescription?: string;
-  onSubmit: (title: string, description: string) => void;
+  initialStartDate?: string;
+  initialDueDate?: string;
+  onSubmit: (data: any) => void;
   submitButtonText?: string;
   isLoading?: boolean;
 }
@@ -23,172 +19,259 @@ interface TaskFormProps {
 export const TaskForm: React.FC<TaskFormProps> = ({
   initialTitle = '',
   initialDescription = '',
+  initialStartDate,
+  initialDueDate,
   onSubmit,
   submitButtonText = 'Guardar',
   isLoading = false,
 }) => {
+  const { colors, theme } = useTheme();
+  
   const [title, setTitle] = useState(initialTitle);
   const [description, setDescription] = useState(initialDescription);
-  const [errors, setErrors] = useState<ValidationError[]>([]);
-  const [touched, setTouched] = useState({ title: false, description: false });
+  
+  //estados para fechas
+  const [startDate, setStartDate] = useState<Date | undefined>(initialStartDate ? new Date(initialStartDate) : undefined);
+  const [dueDate, setDueDate] = useState<Date | undefined>(initialDueDate ? new Date(initialDueDate) : undefined);
+  
+  //control de pickers
+  //mode: 'date' | 'time' para controlar que selector se muestra
+  const [pickerMode, setPickerMode] = useState<'date' | 'time'>('date');
+  const [activeField, setActiveField] = useState<'start' | 'due' | null>(null);
 
-  // Actualizar valores si cambian las props iniciales (útil para edición)
-  useEffect(() => {
-    setTitle(initialTitle);
-    setDescription(initialDescription);
-  }, [initialTitle, initialDescription]);
+  const [errors, setErrors] = useState<ValidationError[]>([]);
+
+  const handleVoiceInput = () => {
+    alert("Para usar voz, presiona el icono de micrófono 🎙️ en tu teclado.");
+  };
+
+  //Manejador unificado de cambios de fecha
+  const handleDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (event.type === 'dismissed') {
+      setActiveField(null);
+      return;
+    }
+
+    const currentDate = selectedDate || new Date();
+
+    if (Platform.OS === 'android') {
+      //primero seleccionamos fecha, luego hora
+      if (pickerMode === 'date') {
+        setPickerMode('time'); //Cambiar a modo hora para la siguiente renderizacion
+        //Guardamos temporalmente la fecha y esperamos a que el usuario elija la hora
+        //Pero como DateTimePicker se cierra al seleccionar necesitamos reabrirlo en modo time
+        //Guardar la fecha seleccionada y abrir el picker de hora inmediatamente
+        if (activeField === 'start') {
+          setStartDate(currentDate);
+        } else {
+          setDueDate(currentDate);
+        }
+        //En Android el componente se desmonta, así que forzamos re-render con time
+        //setTimeout ayuda a que el UI responda
+      } else {
+        //modo 'time': Ya tenemos fecha y hora
+        if (activeField === 'start' && startDate) {
+            const finalDate = new Date(startDate);
+            finalDate.setHours(currentDate.getHours());
+            finalDate.setMinutes(currentDate.getMinutes());
+            setStartDate(finalDate);
+        } else if (activeField === 'due' && dueDate) {
+            const finalDate = new Date(dueDate);
+            finalDate.setHours(currentDate.getHours());
+            finalDate.setMinutes(currentDate.getMinutes());
+            setDueDate(finalDate);
+        } else if (activeField === 'start' && !startDate) {
+             setStartDate(currentDate);
+        } else if (activeField === 'due' && !dueDate) {
+             setDueDate(currentDate);
+        }
+        
+        setActiveField(null);
+        setPickerMode('date');//Resetear a fecha para la próxima
+      }
+    } else {
+      // iOS soporta datetime directamente
+      if (activeField === 'start') setStartDate(currentDate);
+      if (activeField === 'due') setDueDate(currentDate);
+      //En iOS el picker no se cierra solo asi que podríamos mantenerlo o cerrarlo con un botón Listo
+      //Aqui asumimos comportamiento estándar
+    }
+  };
+  
+  const showPicker = (field: 'start' | 'due') => {
+      setActiveField(field);
+      setPickerMode('date');//empezar pidiendo fecha
+  };
 
   const handleSubmit = () => {
-    // Marcar todos los campos como tocados
-    setTouched({ title: true, description: true });
-
-    // Validar formulario
     const validationErrors = validateTaskForm(title, description);
     setErrors(validationErrors);
 
-    // Si no hay errores, enviar datos
     if (validationErrors.length === 0) {
-      onSubmit(title.trim(), description.trim());
+      const taskPayload = {
+        title: title.trim(),
+        description: description.trim(),
+        startDate: startDate ? startDate.toISOString() : undefined,
+        dueDate: dueDate ? dueDate.toISOString() : undefined
+      };
+      //enviamos el payload limpio
+      onSubmit(taskPayload);
     }
   };
 
-  const getErrorMessage = (field: 'title' | 'description'): string | undefined => {
-    if (!touched[field]) return undefined;
-    return errors.find(err => err.field === field)?.message;
+  const formatDate = (date?: Date) => {
+    if (!date) return 'Seleccionar fecha y hora';
+    return date.toLocaleString('es-ES', { 
+      day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' 
+    });
   };
 
-  const handleTitleChange = (text: string) => {
-    setTitle(text);
-    if (touched.title) {
-      const validationErrors = validateTaskForm(text, description);
-      setErrors(validationErrors);
+  const inputStyle = [
+    styles.input, 
+    { 
+      backgroundColor: colors.inputBg, 
+      color: colors.text, 
+      borderColor: colors.border,
     }
-  };
-
-  const handleDescriptionChange = (text: string) => {
-    setDescription(text);
-    if (touched.description) {
-      const validationErrors = validateTaskForm(title, text);
-      setErrors(validationErrors);
-    }
-  };
+  ];
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Campo Título */}
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
+        
+        {/* Título */}
         <View style={styles.fieldContainer}>
-          <Text style={styles.label}>Título *</Text>
+          <View style={styles.labelRow}>
+            <Text style={[styles.label, { color: colors.text }]}>Título *</Text>
+            <TouchableOpacity onPress={handleVoiceInput}>
+              <Mic size={20} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
           <TextInput
-            style={[
-              styles.input,
-              getErrorMessage('title') && touched.title && styles.inputError,
-            ]}
+            style={inputStyle}
             value={title}
-            onChangeText={handleTitleChange}
-            onBlur={() => setTouched(prev => ({ ...prev, title: true }))}
-            placeholder="Ingresa el título de la tarea"
-            editable={!isLoading}
-            maxLength={100}
+            onChangeText={setTitle}
+            placeholder="Ej. Reunión de proyecto"
+            placeholderTextColor={colors.subtext}
           />
-          {getErrorMessage('title') && (
-            <Text style={styles.errorText}>{getErrorMessage('title')}</Text>
-          )}
         </View>
 
-        {/* Campo Descripción */}
+        {/* Descripción */}
         <View style={styles.fieldContainer}>
-          <Text style={styles.label}>Descripción *</Text>
+          <Text style={[styles.label, { color: colors.text }]}>Descripción</Text>
           <TextInput
-            style={[
-              styles.input,
-              styles.textArea,
-              getErrorMessage('description') && touched.description && styles.inputError,
-            ]}
+            style={[inputStyle, styles.textArea]}
             value={description}
-            onChangeText={handleDescriptionChange}
-            onBlur={() => setTouched(prev => ({ ...prev, description: true }))}
-            placeholder="Describe los detalles de la tarea"
+            onChangeText={setDescription}
+            placeholder="Detalles adicionales..."
+            placeholderTextColor={colors.subtext}
             multiline
             numberOfLines={4}
-            textAlignVertical="top"
-            editable={!isLoading}
-            maxLength={500}
           />
-          {getErrorMessage('description') && (
-            <Text style={styles.errorText}>{getErrorMessage('description')}</Text>
-          )}
         </View>
 
-        {/* Botón de envío */}
+        {/* FECHAS */}
+        <View style={styles.datesContainer}>
+          
+          {/* Inicio */}
+          <View style={styles.dateBlock}>
+            <Text style={[styles.label, { color: colors.text, fontSize: 14, marginBottom: 6 }]}>
+               Iniciar (Fecha/Hora)
+            </Text>
+            <TouchableOpacity 
+              style={[styles.dateButton, { borderColor: colors.border, backgroundColor: colors.inputBg }]}
+              onPress={() => showPicker('start')}
+            >
+              <Calendar size={18} color={startDate ? colors.primary : colors.subtext} />
+              <Text style={{ color: startDate ? colors.text : colors.subtext, marginLeft: 8, flex: 1 }}>
+                {formatDate(startDate)}
+              </Text>
+              {startDate && (
+                <TouchableOpacity onPress={() => setStartDate(undefined)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                  <XCircle size={18} color={colors.danger} />
+                </TouchableOpacity>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {/* Vencimiento */}
+          <View style={styles.dateBlock}>
+            <Text style={[styles.label, { color: colors.text, fontSize: 14, marginBottom: 6 }]}>
+               Vencimiento (Fecha/Hora)
+            </Text>
+            <TouchableOpacity 
+              style={[styles.dateButton, { borderColor: colors.border, backgroundColor: colors.inputBg }]}
+              onPress={() => showPicker('due')}
+            >
+              <Clock size={18} color={dueDate ? colors.danger : colors.subtext} />
+              <Text style={{ color: dueDate ? colors.text : colors.subtext, marginLeft: 8, flex: 1 }}>
+                {formatDate(dueDate)}
+              </Text>
+              {dueDate && (
+                <TouchableOpacity onPress={() => setDueDate(undefined)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                  <XCircle size={18} color={colors.danger} />
+                </TouchableOpacity>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* DateTimePicker Component */}
+        {activeField && (
+          <DateTimePicker
+            value={
+                activeField === 'start' 
+                ? (startDate || new Date()) 
+                : (dueDate || new Date())
+            }
+            mode={Platform.OS === 'ios' ? 'datetime' : pickerMode}
+            is24Hour={true}
+            display="default"
+            onChange={handleDateChange}
+            minimumDate={new Date()} //no permitir fechas pasadas
+          />
+        )}
+
         <TouchableOpacity
-          style={[styles.button, isLoading && styles.buttonDisabled]}
+          style={[styles.button, { backgroundColor: colors.primary }]}
           onPress={handleSubmit}
           disabled={isLoading}
         >
-          <Text style={styles.buttonText}>
-            {isLoading ? 'Guardando...' : submitButtonText}
-          </Text>
+          <Text style={styles.buttonText}>{isLoading ? 'Guardando...' : submitButtonText}</Text>
         </TouchableOpacity>
+
       </ScrollView>
     </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 20,
-  },
-  fieldContainer: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8,
-    color: '#333',
-  },
+  fieldContainer: { marginBottom: 20 },
+  labelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8, alignItems: 'center' },
+  label: { fontSize: 16, fontWeight: '600', marginBottom: 8 },
   input: {
-    backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 10,
+    padding: 14,
     fontSize: 16,
-    color: '#333',
   },
-  textArea: {
-    minHeight: 100,
-    paddingTop: 12,
-  },
-  inputError: {
-    borderColor: '#ef4444',
-    borderWidth: 2,
-  },
-  errorText: {
-    color: '#ef4444',
-    fontSize: 14,
-    marginTop: 4,
-  },
+  textArea: { minHeight: 100, textAlignVertical: 'top' },
   button: {
-    backgroundColor: '#3b82f6',
     padding: 16,
-    borderRadius: 8,
+    borderRadius: 10,
     alignItems: 'center',
     marginTop: 10,
+    elevation: 3,
   },
-  buttonDisabled: {
-    backgroundColor: '#9ca3af',
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  datesContainer: { flexDirection: 'column', gap: 15, marginBottom: 25 },
+  dateBlock: { flex: 1 },
+  dateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 12,
+    height: 50,
+  }
 });

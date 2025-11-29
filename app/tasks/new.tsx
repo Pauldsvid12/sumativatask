@@ -1,33 +1,30 @@
 import React, { useState } from 'react';
-import {
-  View,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-} from 'react-native';
+import { View, StyleSheet, Text, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView} from 'react-native';
 import { TaskForm } from '../../components/TaskForm';
 import { useTasks } from '../../lib/contexts/TaskContext';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../../lib/contexts/ThemeContext';
-import { X } from 'lucide-react-native'; // icono para cancelar
+import { X } from 'lucide-react-native';
 
 export default function NewTask() {
   const { addTask } = useTasks();
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const router = useRouter();
-  const { theme } = useTheme();
+  const { colors, theme } = useTheme();
 
-  const backgroundColor = theme === 'light' ? '#f9fafb' : '#121212';
-  const textColor = theme === 'light' ? '#111' : '#eee';
-
-  const handleSubmit = async (title: string, description: string) => {
+  const handleSubmit = async (data: any) => {
     setLoading(true);
     setFormError(null);
-    const success = await addTask({ title, description });
+    
+    //extraer los datos del objeto
+    const success = await addTask({ 
+      title: data.title, 
+      description: data.description,
+      startDate: data.startDate,
+      dueDate: data.dueDate
+    });
+    
     setLoading(false);
 
     if (success) {
@@ -44,12 +41,12 @@ export default function NewTask() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={[styles.container, { backgroundColor }]}
+      style={[styles.container, { backgroundColor: colors.background }]}
     >
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: textColor }]}>Nueva Tarea</Text>
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <Text style={[styles.title, { color: colors.text }]}>Nueva Tarea</Text>
         <TouchableOpacity onPress={handleCancel} style={styles.cancelButton}>
-          <X color={textColor} width={28} height={28} />
+          <X color={colors.text} width={28} height={28} />
         </TouchableOpacity>
       </View>
 
@@ -67,13 +64,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    height: 56,
+    height: 60,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
+    marginTop: 10,
   },
   cancelButton: {
     padding: 6,

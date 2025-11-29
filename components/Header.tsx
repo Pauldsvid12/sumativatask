@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Settings } from 'lucide-react-native';
+import { useTheme } from '../lib/contexts/ThemeContext';
 
 interface HeaderProps {
   title: string;
@@ -8,12 +10,20 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ title }) => {
   const router = useRouter();
+  const { colors, theme } = useTheme();
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{title}</Text>
+    <View style={[
+      styles.container, 
+      { 
+        backgroundColor: theme === 'dark' ? colors.card : colors.primary,
+        borderBottomWidth: theme === 'dark' ? 1 : 0,
+        borderBottomColor: colors.border
+      }
+    ]}>
+      <Text style={[styles.title, { color: '#fff' }]}>{title}</Text>
       <TouchableOpacity onPress={() => router.push('/settings')}>
-        <Text style={styles.configButton}>⚙️</Text>
+        <Settings color="#fff" size={24} />
       </TouchableOpacity>
     </View>
   );
@@ -21,20 +31,17 @@ export const Header: React.FC<HeaderProps> = ({ title }) => {
 
 const styles = StyleSheet.create({
   container: {
-    height: 56,
+    height: 60,
     paddingHorizontal: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#3b82f6',
+    marginBottom: 16,
+    borderRadius: 8,
+    marginTop: 8,
   },
   title: {
-    color: '#fff',
     fontSize: 20,
     fontWeight: '700',
-  },
-  configButton: {
-    fontSize: 24,
-    color: '#fff',
   },
 });

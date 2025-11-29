@@ -3,25 +3,34 @@ import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { Task } from '../lib/types/task';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../lib/contexts/ThemeContext';
-import { Edit, Trash, CheckCircle, Circle } from 'lucide-react-native';
+import { Edit, Trash, CheckCircle, Circle, Clock } from 'lucide-react-native';
 
 interface TaskCardProps {
   task: Task;
-  onToggleComplete: (id: string) => void; // Cambiado a string
-  onDelete: (id: string) => void;         // Cambiado a string
+  onToggleComplete: (id: string) => void;
+  onDelete: (id: string) => void;
 }
-
 export const TaskCard: React.FC<TaskCardProps> = ({
   task,
   onToggleComplete,
   onDelete,
 }) => {
   const router = useRouter();
-  const { theme } = useTheme();
+  const { colors, theme } = useTheme();
 
-  const backgroundColor = theme === 'light' ? '#fff' : '#1e1e1e';
-  const textColor = theme === 'light' ? '#1f2937' : '#ddd';
-  const subTextColor = theme === 'light' ? '#6b7280' : '#aaa';
+  //PROTECCIÓN CONTRA ERRORES DE RENDERIZADO:
+  //si task no existe o no es un objeto no renderizamos nada
+  if (!task || typeof task !== 'object') return null;
+
+  //extraer strings seguros para evitar renderizar objetos accidentalmente
+  const titleSafe = typeof task.title === 'string' ? task.title : 'Sin título';
+  const descSafe = typeof task.description === 'string' ? task.description : '';
+  const idSafe = String(task.id);
+
+  const now = new Date();
+  const isExpired = task.dueDate && new Date(task.dueDate) < now && !task.completed;
+  const isDueSoon = task.dueDate && !isExpired && !task.completed && 
+    new Date(task.dueDate).toDateString() === now.toDateString();
 
   const handleDelete = () => {
     Alert.alert(
@@ -32,102 +41,132 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         {
           text: 'Eliminar',
           style: 'destructive',
-          onPress: () => onDelete(task.id),
+          onPress: () => onDelete(idSafe),
         },
       ]
     );
   };
 
   const handleEdit = () => {
-    // Navegación con params.id como string
     router.push({
       pathname: '/tasks/[id]',
-      params: { id: task.id },
+      params: { id: idSafe },
     });
   };
 
-  const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
+  const formatNiceDate = (dateString?: string) => {
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('es-ES', { 
+        day: 'numeric', 
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (e) {
+      return '';
+    }
+  };
+
+  const cardContainerStyle = [
+    styles.card,
+    {
+      backgroundColor: colors.card,
+      borderColor: isExpired ? colors.danger : (theme === 'dark' ? '#333' : 'transparent'),
+      borderWidth: theme === 'dark' || isExpired ? 1 : 0,
+      shadowColor: isExpired ? colors.danger : (theme === 'dark' ? '#ffffff' : '#000'),
+      shadowOpacity: theme === 'dark' ? 0.1 : 0.08,
+      shadowRadius: theme === 'dark' ? 6 : 4,
+      elevation: theme === 'dark' ? 3 : 2,
+    }
+  ];
+
+  const getBadgeColor = () => {
+    if (isExpired) return '#fee2e2';
+    if (isDueSoon) return '#fef3c7';
+    return colors.background;
+  };
+
+  const getBadgeTextColor = () => {
+    if (isExpired) return colors.danger;
+    if (isDueSoon) return '#d97706';
+    return colors.subtext;
   };
 
   return (
-    <View style={[styles.card, { backgroundColor }]}>
-      {/* Encabezado con título y estado */}
+    <View style={cardContainerStyle}>
       <View style={styles.header}>
+        {/* Usamos titleSafe para asegurar que es string */}
         <Text
           style={[
             styles.title,
-            { color: textColor },
+            { color: colors.text },
             task.completed && styles.titleCompleted,
           ]}
           numberOfLines={1}
         >
-          {task.title}
+          {titleSafe}
         </Text>
-        <View
-          style={[
-            styles.badge,
-            task.completed ? styles.badgeCompleted : styles.badgePending,
-          ]}
-        >
-          <Text style={styles.badgeText}>
-            {task.completed ? 'Completada' : 'Pendiente'}
-          </Text>
-        </View>
+        
+        {task.dueDate && (
+          <View style={[styles.badge, { backgroundColor: getBadgeColor() }]}>
+            <Clock size={12} color={getBadgeTextColor()} />
+            <Text style={[styles.badgeText, { color: getBadgeTextColor() }]}>
+              {isExpired ? 'Vencida' : formatNiceDate(task.dueDate)}
+            </Text>
+          </View>
+        )}
       </View>
 
-      {/* Descripción */}
-      <Text
-        style={[
-          styles.description,
-          { color: subTextColor },
-          task.completed && styles.descriptionCompleted,
-        ]}
-        numberOfLines={2}
-      >
-        {task.description}
-      </Text>
+      {descSafe ? (
+        <Text
+          style={[
+            styles.description,
+            { color: colors.subtext },
+            task.completed && styles.descriptionCompleted,
+          ]}
+          numberOfLines={2}
+        >
+          {descSafe}
+        </Text>
+      ) : null}
 
-      {/* Fecha */}
-      <Text style={[styles.date, { color: subTextColor }]}>
-        Creada: {formatDate(task.createdAt)}
-      </Text>
+      <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
-      {/* Botones de acción */}
       <View style={styles.actions}>
         <TouchableOpacity
-          style={[styles.actionButton, styles.toggleButton]}
-          onPress={() => onToggleComplete(task.id)}
+          style={styles.leftAction}
+          onPress={() => onToggleComplete(idSafe)}
+          activeOpacity={0.7}
         >
           {task.completed ? (
-            <CheckCircle size={18} color="#065f46" />
+            <CheckCircle size={22} color={colors.accent} />
           ) : (
-            <Circle size={18} color="#1f2937" />
+            <Circle size={22} color={colors.subtext} />
           )}
-          <Text style={styles.actionButtonText}>
-            {task.completed ? ' Pendiente' : ' Completar'}
+          <Text style={[styles.actionText, { color: task.completed ? colors.accent : colors.subtext }]}>
+            {task.completed ? ' Completada' : ' Pendiente'}
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.actionButton, styles.editButton]}
-          onPress={handleEdit}
-        >
-          <Edit size={18} color="#1f2937" />
-          <Text style={styles.actionButtonText}> Editar</Text>
-        </TouchableOpacity>
+        <View style={styles.rightActions}>
+          <TouchableOpacity
+            style={styles.iconBtn}
+            onPress={handleEdit}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Edit size={20} color={colors.text} />
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.actionButton, styles.deleteButton]}
-          onPress={handleDelete}
-        >
-          <Trash size={18} color="#b91c1c" />
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.iconBtn}
+            onPress={handleDelete}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Trash size={20} color={colors.danger} />
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -135,14 +174,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    marginBottom: 16,
   },
   header: {
     flexDirection: 'row',
@@ -152,7 +186,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
     flex: 1,
     marginRight: 8,
   },
@@ -161,60 +195,50 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 12,
-  },
-  badgeCompleted: {
-    backgroundColor: '#d1fae5',
-  },
-  badgePending: {
-    backgroundColor: '#fef3c7',
+    borderRadius: 8,
   },
   badgeText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
-    color: '#065f46',
+    marginLeft: 4,
   },
   description: {
     fontSize: 14,
-    marginBottom: 8,
+    marginBottom: 12,
     lineHeight: 20,
   },
   descriptionCompleted: {
     opacity: 0.6,
   },
-  date: {
-    fontSize: 12,
+  divider: {
+    height: 1,
+    width: '100%',
     marginBottom: 12,
+    opacity: 0.5,
   },
   actions: {
     flexDirection: 'row',
-    gap: 8,
-  },
-  actionButton: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 6,
+    justifyContent: 'space-between',
     alignItems: 'center',
   },
-  toggleButton: {
-    backgroundColor: '#dbeafe',
+  leftAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  editButton: {
-    backgroundColor: '#e0e7ff',
-  },
-  deleteButton: {
-    backgroundColor: '#fee2e2',
-    flex: 0.3,
-  },
-  actionButtonText: {
-    fontSize: 13,
+  actionText: {
+    fontSize: 14,
     fontWeight: '600',
-    color: '#1f2937',
-    marginLeft: 4,
+    marginLeft: 6,
   },
+  rightActions: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  iconBtn: {
+    padding: 4,
+  }
 });

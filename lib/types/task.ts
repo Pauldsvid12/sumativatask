@@ -4,11 +4,15 @@ export interface Task {
   description: string;
   completed: boolean;
   createdAt: string;
+  startDate?: string;
+  dueDate?: string; 
 }
 
 export interface TaskFormData {
   title: string;
   description: string;
+  startDate?: string;
+  dueDate?: string;
 }
 
 export interface ValidationError {

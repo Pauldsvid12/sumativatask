@@ -1,7 +1,7 @@
 import axios, { AxiosError } from 'axios';
 import { Task, TaskFormData, ApiResponse } from '../types/task';
 
-//URL por la IP de tu computadora (ipconfig)
+//URL por la IP computadora (ipconfig)
 const API_URL = 'https://3000-firebase-sumativatask-1764177843484.cluster-r7kbxfo3fnev2vskbkhhphetq6.cloudworkstations.dev';
 
 const apiClient = axios.create({
@@ -27,7 +27,6 @@ export const getTasks = async (): Promise<ApiResponse<Task[]>> => {
   }
 };
 
-// CAMBIO AQUÍ: id: string
 export const getTaskById = async (id: string): Promise<ApiResponse<Task>> => {
   try {
     const response = await apiClient.get<Task>(`/tasks/${id}`);
@@ -51,7 +50,6 @@ export const createTask = async (taskData: TaskFormData): Promise<ApiResponse<Ta
   }
 };
 
-// CAMBIO AQUÍ: id: string
 export const updateTask = async (
   id: string, 
   taskData: Partial<Task>

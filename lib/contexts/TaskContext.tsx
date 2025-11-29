@@ -9,7 +9,6 @@ interface TaskContextType {
   fetchTasks: () => Promise<void>;
   addTask: (taskData: TaskFormData) => Promise<boolean>;
   
-  // CAMBIOS AQUÍ: id es string
   editTask: (id: string, taskData: Partial<Task>) => Promise<boolean>;
   removeTask: (id: string) => Promise<boolean>;
   toggleTaskComplete: (id: string) => Promise<boolean>;
@@ -53,7 +52,6 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  // CAMBIO: id: string
   const editTask = async (id: string, taskData: Partial<Task>): Promise<boolean> => {
     setLoading(true);
     const response = await api.updateTask(id, taskData);
@@ -68,7 +66,6 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  // CAMBIO: id: string
   const removeTask = async (id: string): Promise<boolean> => {
     setLoading(true);
     const response = await api.deleteTask(id);
@@ -83,14 +80,12 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  // CAMBIO: id: string
   const toggleTaskComplete = async (id: string): Promise<boolean> => {
     const task = tasks.find(t => t.id === id);
     if (!task) return false;
     return await editTask(id, { completed: !task.completed });
   };
 
-  // CAMBIO: id: string
   const getTask = (id: string): Task | undefined => {
     return tasks.find(task => task.id === id);
   };

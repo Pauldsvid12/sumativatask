@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Switch } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Switch, Linking, Platform } from 'react-native';
 import { useTheme } from '../lib/contexts/ThemeContext';
 import { useTasks } from '../lib/contexts/TaskContext';
 import { useRouter } from 'expo-router';
@@ -18,26 +18,47 @@ export default function Settings() {
 
   const handleDeleteAll = () => {
     if (tasks.length === 0) {
-      Alert.alert("Info", "No hay tareas para eliminar");
+      if (Platform.OS === 'web') {
+        window.alert("No hay tareas para eliminar");
+      } else {
+        Alert.alert("Info", "No hay tareas para eliminar");
+      }
       return;
     }
 
-    Alert.alert(
-      'Zona de Peligro',
-      '¿Estás seguro de que quieres eliminar TODAS las tareas? Esto no se puede deshacer.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Sí, eliminar todo',
-          style: 'destructive',
-          onPress: async () => {
-            const promises = tasks.map(t => removeTask(t.id));
-            await Promise.all(promises);
-            Alert.alert("Éxito", "Todas las tareas han sido eliminadas");
+    const performDeleteAll = async () => {
+      const promises = tasks.map(t => removeTask(t.id));
+      await Promise.all(promises);
+      if (Platform.OS === 'web') {
+        window.alert("Todas las tareas han sido eliminadas");
+      } else {
+        Alert.alert("Éxito", "Todas las tareas han sido eliminadas");
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm('Zona de Peligro: ¿Estás seguro de que quieres eliminar TODAS las tareas?')) {
+        performDeleteAll();
+      }
+    } else {
+      Alert.alert(
+        'Zona de Peligro',
+        '¿Estás seguro de que quieres eliminar TODAS las tareas? Esto no se puede deshacer.',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Sí, eliminar todo',
+            style: 'destructive',
+            onPress: performDeleteAll,
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
+  };
+
+  //Abrir el repositorio
+  const handleOpenRepo = () => {
+    Linking.openURL('https://github.com/Pauldsvid12/sumativatask');
   };
 
   const SettingsSection = ({ title, children }: { title: string, children: React.ReactNode }) => (
@@ -127,7 +148,8 @@ export default function Settings() {
             icon={Github}
             label="Repositorio del Proyecto"
             isLast
-            value={<Text style={{ color: subTextColor }}>Ver</Text>}
+            onPress={handleOpenRepo} // Aquí conectamos el enlace
+            value={<Text style={{ color: '#3b82f6' }}>Abrir</Text>}
           />
         </SettingsSection>
 
