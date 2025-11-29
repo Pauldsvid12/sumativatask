@@ -1,53 +1,32 @@
-> Edited for use in IDX on 07/09/12
+# 📝 TaskFlow - Gestor de Tareas Inteligente
 
-# Welcome to your Expo app 👋
+Una aplicación moderna de gestión de tareas desarrollada con **React Native (Expo)**, diseñada para ser intuitiva, visualmente atractiva y funcional. Incluye soporte completo para modo oscuro, gestión de plazos y una arquitectura robusta.
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+## 🚀 Características Principales
 
-## Get started
+- **Gestión de Tareas:** Crear, leer, editar y eliminar tareas (CRUD completo).
+- **⏰ Gestión de Tiempo:**
+  - Establecer fecha y hora de inicio.
+  - Definir fechas de vencimiento (Deadlines).
+  - Alertas visuales para tareas vencidas o próximas a vencer.
+- **🎨 Interfaz Moderna & Temas:**
+  - **Modo Claro:** Diseño limpio y minimalista.
+  - **Modo Oscuro:** Estilo "Cyberpunk/Glow" con acentos neón y alto contraste.
+  - Cambio de tema persistente (se guarda tu preferencia).
+- **🔍 Ordenamiento Inteligente:** Las tareas se ordenan automáticamente por urgencia (fecha de vencimiento) y luego por creación.
+- **📱 Experiencia Nativa:**
+  - Uso de iconos profesionales (`lucide-react-native`).
+  - Selectores de fecha/hora nativos (Android/iOS).
+  - Animaciones y feedback táctil.
+- **⚙️ Configuración Avanzada:**
+  - Panel de ajustes dedicado.
+  - Opción de "Zona de Peligro" para eliminar todas las tareas.
 
-#### Android
+## 🛠️ Tecnologías Utilizadas
 
-Android previews are defined as a `workspace.onStart` hook and started as a vscode task when the workspace is opened/started.
-
-Note, if you can't find the task, either:
-- Rebuild the environment (using command palette: `IDX: Rebuild Environment`), or
-- Run `npm run android -- --tunnel` command manually run android and see the output in your terminal. The device should pick up this new command and switch to start displaying the output from it.
-
-In the output of this command/task, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You'll also find options to open the app's developer menu, reload the app, and more.
-
-#### Web
-
-Web previews will be started and managred automatically. Use the toolbar to manually refresh.
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- **Frontend:** React Native, Expo Router, TypeScript.
+- **Estilos:** StyleSheet nativo, Lucide Icons.
+- **Estado:** React Context API (TaskContext, ThemeContext).
+- **Backend (Simulado):** `json-server` para simular una API REST completa.
+- **Persistencia:** AsyncStorage (para temas) y API REST (para datos).
+- **Validación:** Lógica robusta para formularios y manejo de errores.
